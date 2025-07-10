@@ -1,0 +1,212 @@
+/* src/index.css */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reactアプリのルートコンテナ */
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Reactアプリ用の基本スタイル */
+
+/* カスタムポップアップのスタイル */
+.custom-popup .mapboxgl-popup-content {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  pointer-events: auto;
+}
+
+.custom-popup .mapboxgl-popup-tip {
+  display: none !important;
+}
+
+.custom-popup .mapboxgl-popup-close-button {
+  display: none !important;
+}
+
+/* ポップアップ全体のz-indexを調整 */
+.mapboxgl-popup {
+  z-index: 1200 !important;
+}
+
+/* ポップアップのフェードインアニメーション */
+@keyframes popupFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ダークモード対応 */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Material-UIのダークモード対応を強化 */
+.MuiCssBaseline-root {
+  color-scheme: inherit;
+}
+
+/* ダークモード時のグラデーション背景 */
+[data-theme="dark"] body {
+  background: linear-gradient(135deg, #0c1421 0%, #1a1f2e 50%, #0f1419 100%);
+}
+
+/* ダークモード時のスクロールバー */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(100, 181, 246, 0.8) 0%, rgba(33, 150, 243, 0.6) 100%);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(100, 181, 246, 1) 0%, rgba(33, 150, 243, 0.8) 100%);
+}
+
+/* ライトモード時のスクロールバー */
+[data-theme="light"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ダークモード時のマーカーアニメーション - Navigation Night用 */
+@keyframes navigationNightGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(0, 230, 118, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(0, 230, 118, 0.9));
+  }
+}
+
+[data-theme="dark"] .marker-glow {
+  animation: navigationNightGlow 2s ease-in-out infinite;
+}
+
+/* ダークモード時のアニメーション効果 - Navigation Night用 */
+[data-theme="dark"] .mapboxgl-popup {
+  filter: drop-shadow(0 8px 32px rgba(0, 230, 118, 0.3));
+}
+
+[data-theme="dark"] .search-results-drawer {
+  box-shadow: 0 -8px 32px rgba(0, 230, 118, 0.2), 0 -4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Navigation Night用のルート線グロー効果 */
+[data-theme="dark"] .route-line-glow {
+  filter: drop-shadow(0 0 10px rgba(0, 230, 118, 0.8));
+}
