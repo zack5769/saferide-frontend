@@ -17,15 +17,17 @@ import { useThemeMode } from "../theme/ThemeProvider";
 interface SearchBarProps {
     initialQuery?: string;
     onClose?: () => void;
+    onBack?: () => void;
     showBackButton?: boolean;
     showCloseButton?: boolean;
     placeholder?: string;
     autoFocus?: boolean;
 }
 
-const SearchBar = forwardRef<HTMLDivElement, SearchBarProps>(({
+const SearchBar = forwardRef<HTMLFormElement, SearchBarProps>(({
     initialQuery = "",
     onClose,
+    onBack,
     showBackButton = false,
     showCloseButton = false,
     placeholder = "ここで検索",
@@ -45,7 +47,11 @@ const SearchBar = forwardRef<HTMLDivElement, SearchBarProps>(({
     };
 
     const handleBack = () => {
-        navigate(-1);
+        if (onBack) {
+            onBack();
+        } else {
+            navigate(-1);
+        }
     };
 
     return (

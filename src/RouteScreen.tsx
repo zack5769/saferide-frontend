@@ -86,7 +86,6 @@ export default function RouteScreen() {
                     rainAvoidance // 雨雲回避設定を追加
                 );
                 setRoute(routeData);
-                
                 // スタート地点とゴール地点が画面に収まるように表示
                 setTimeout(() => {
                     if (mapRef.current && currentPosition) {
@@ -94,22 +93,18 @@ export default function RouteScreen() {
                             // スタート地点（現在地）とゴール地点の座標
                             const startCoords: [number, number] = [currentPosition[0], currentPosition[1]];
                             const endCoords: [number, number] = [endLng, endLat];
-                            
                             // バウンディングボックスを計算
                             const minLng = Math.min(startCoords[0], endCoords[0]);
                             const maxLng = Math.max(startCoords[0], endCoords[0]);
                             const minLat = Math.min(startCoords[1], endCoords[1]);
                             const maxLat = Math.max(startCoords[1], endCoords[1]);
-                            
                             // パディングを追加（両地点間の距離の10%）
                             const lngPadding = Math.max((maxLng - minLng) * 0.2, 0.01);
                             const latPadding = Math.max((maxLat - minLat) * 0.2, 0.01);
-                            
                             const bounds: [[number, number], [number, number]] = [
                                 [minLng - lngPadding, minLat - latPadding],
                                 [maxLng + lngPadding, maxLat + latPadding]
                             ];
-                            
                             mapRef.current.fitBounds(bounds, {
                                 padding: {
                                     top: 80,
@@ -125,19 +120,16 @@ export default function RouteScreen() {
                             // フォールバック: 中心点とズームレベルを計算
                             const centerLng = (currentPosition[0] + endLng) / 2;
                             const centerLat = (currentPosition[1] + endLat) / 2;
-                            
                             // 距離に基づいてズームレベルを計算
                             const lngDiff = Math.abs(endLng - currentPosition[0]);
                             const latDiff = Math.abs(endLat - currentPosition[1]);
                             const maxDiff = Math.max(lngDiff, latDiff);
-                            
                             let zoom = 14;
                             if (maxDiff < 0.01) zoom = 16;
                             else if (maxDiff < 0.05) zoom = 14;
                             else if (maxDiff < 0.1) zoom = 12;
                             else if (maxDiff < 0.5) zoom = 10;
                             else zoom = 8;
-                            
                             setViewport({
                                 longitude: centerLng,
                                 latitude: centerLat,
@@ -146,13 +138,20 @@ export default function RouteScreen() {
                         }
                     }
                 }, 500); // ルート描画後に実行
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to fetch route:', error);
+                // 400エラー時はエラーメッセージ付きで検索画面に戻る
+                if (error && error.message && error.message.includes('status: 400')) {
+                    const errorMsg = encodeURIComponent('ルートを取得できませんでした。\n現在地または目的地が雨、経路が国外を通る、または到着地点までの道がありません。');
+                    // 元の検索クエリも一緒に保持
+                    navigate(`/searchResult?q=${encodeURIComponent(destinationName)}&error=${errorMsg}`);
+                } else {
+                    console.error('Failed to fetch route:', error);
+                }
             } finally {
                 setLoading(false);
             }
         };
-
         fetchRoute();
     }, [currentPosition, endLng, endLat, rainAvoidance]); // rainAvoidanceを依存配列に追加
 

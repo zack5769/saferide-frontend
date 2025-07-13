@@ -43,11 +43,13 @@ interface SearchResult {
 
 export default function SearchResultScreen() {
     const [searchParams] = useSearchParams();
+    // エラーメッセージ取得
+    const errorMessage = searchParams.get('error');
     const navigate = useNavigate();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const { isDarkMode } = useThemeMode();
-    
+
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
@@ -55,12 +57,23 @@ export default function SearchResultScreen() {
     const [hasInitiallyAdjusted, setHasInitiallyAdjusted] = useState(false);
     const [hasSearchResults, setHasSearchResults] = useState(false);
     const [rainAvoidance, setRainAvoidance] = useState(true); // 雨雲回避設定を追加
-    
+
     const { viewport, setViewport, mapRef, flyTo } = useMapViewport({
         initialLongitude: 138,
         initialLatitude: 36,
         initialZoom: 6
     });
+
+    // --- エラー表示用 ---
+    const [showError, setShowError] = useState(!!errorMessage);
+    // エラーアラートを閉じる
+    const handleCloseError = () => {
+        setShowError(false);
+        // エラーを消してURLをクリーンアップ（検索クエリは保持）
+        const params = new URLSearchParams(searchParams);
+        params.delete('error');
+        navigate({ pathname: '/searchResult', search: params.toString() }, { replace: true });
+    };
 
     // ピンを画面中央に表示する関数
     const centerMapOnPin = (lat: number, lon: number) => {
@@ -209,10 +222,24 @@ export default function SearchResultScreen() {
     // 初回検索実行
     useEffect(() => {
         const initialQuery = searchParams.get('q');
-        if (initialQuery) {
+        if (initialQuery && !errorMessage) {
             performSearch(initialQuery);
         }
-    }, [searchParams]);
+    }, [searchParams.get('q')]); // searchParams全体ではなく、クエリ部分のみを監視
+
+    // エラーがあれば自動で表示（検索結果がなくてもエラーを表示）
+    useEffect(() => {
+        if (errorMessage) {
+            setShowError(true);
+            // エラーがある場合も、既存の検索結果がある場合は保持
+            if (results.length > 0) {
+                setHasSearchResults(true);
+            } else {
+                setHasSearchResults(true); // エラーがある場合は検索結果セクションを表示
+            }
+            setShowResults(true); // エラーメッセージを表示するためドロワーを表示
+        }
+    }, [errorMessage, results.length]);
 
     // 個別のマーカークリック時（アニメーション付きでズーム）
     const handleMarkerClick = (lat: number, lon: number, index: number) => {
@@ -312,429 +339,505 @@ export default function SearchResultScreen() {
         <AppLayout hideNavigation>
             {/* 検索バー */}
             <SearchBar 
-                initialQuery={searchParams.get('q') || ''}
-                showBackButton
-                placeholder="場所を検索..."
-                autoFocus
+            initialQuery={searchParams.get('q') || ''}
+            showBackButton
+            placeholder="場所を検索..."
+            autoFocus
+            onBack={() => {
+                // エラー状態の場合は単純に前の画面に戻る（新しい検索やフェッチを実行しない）
+                if (showError && errorMessage) {
+                    navigate('/', { replace: true });
+                } else {
+                    navigate('/');
+                }
+            }}
             />
 
             {/* 全体表示ボタン（個別マーカーが選択されている時のみ表示） */}
             {!showResults && results.length > 1 && (
-                <Button
-                    variant="contained"
-                    size="small"
-                    onClick={handleShowAllResults}
-                    sx={{
-                        position: 'absolute',
-                        top: 80,
-                        right: 16,
-                        zIndex: 1100,
-                        minWidth: 'auto',
-                        px: 2,
-                        borderRadius: 3,
-                    }}
-                >
-                    全体表示
-                </Button>
+            <Button
+                variant="contained"
+                size="small"
+                onClick={handleShowAllResults}
+                sx={{
+                position: 'absolute',
+                top: 80,
+                right: 16,
+                zIndex: 1100,
+                minWidth: 'auto',
+                px: 2,
+                borderRadius: 3,
+                }}
+            >
+                全体表示
+            </Button>
             )}
 
             {/* 地図 - 画面全体 */}
             <MapContainer
-                ref={mapRef}
-                viewport={viewport}
-                onMove={evt => setViewport(evt.viewState)}
-                style={{ 
-                    width: '100vw', 
-                    height: '100vh',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    zIndex: 1
-                }}
+            ref={mapRef}
+            viewport={viewport}
+            onMove={evt => setViewport(evt.viewState)}
+            style={{ 
+                width: '100vw', 
+                height: '100vh',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                zIndex: 1
+            }}
             >
-                {/* 検索結果マーカー */}
-                {results.map((result, idx) => (
-                    <Marker
-                        key={idx}
-                        longitude={result.lon}
-                        latitude={result.lat}
-                        onClick={(e) => handleMapMarkerClick(e, idx)}
-                    >
-                        <Box
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                bgcolor: selectedMarker === idx ? 'secondary.main' : 'primary.main',
-                                borderRadius: '50% 50% 50% 0',
-                                transform: 'rotate(-45deg)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                '&:hover': {
-                                    transform: 'rotate(-45deg) scale(1.15)',
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                                },
-                                // 選択されたマーカーを強調
-                                ...(selectedMarker === idx && {
-                                    boxShadow: '0 0 0 3px rgba(245, 0, 87, 0.3), 0 4px 20px rgba(245, 0, 87, 0.2)',
-                                    transform: 'rotate(-45deg) scale(1.1)',
-                                }),
-                            }}
-                        >
-                            <LocationOnIcon 
-                                sx={{ 
-                                    color: 'white', 
-                                    transform: 'rotate(45deg)',
-                                    fontSize: 20,
-                                    transition: 'all 0.2s',
-                                }} 
-                            />
-                        </Box>
-                    </Marker>
-                ))}
+            {/* 検索結果マーカー */}
+            {results.map((result, idx) => (
+                <Marker
+                key={idx}
+                longitude={result.lon}
+                latitude={result.lat}
+                onClick={(e) => handleMapMarkerClick(e, idx)}
+                >
+                <Box
+                    sx={{
+                    width: 40,
+                    height: 40,
+                    bgcolor: selectedMarker === idx ? 'secondary.main' : 'primary.main',
+                    borderRadius: '50% 50% 50% 0',
+                    transform: 'rotate(-45deg)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                        transform: 'rotate(-45deg) scale(1.15)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                    },
+                    // 選択されたマーカーを強調
+                    ...(selectedMarker === idx && {
+                        boxShadow: '0 0 0 3px rgba(245, 0, 87, 0.3), 0 4px 20px rgba(245, 0, 87, 0.2)',
+                        transform: 'rotate(-45deg) scale(1.1)',
+                    }),
+                    }}
+                >
+                    <LocationOnIcon 
+                    sx={{ 
+                        color: 'white', 
+                        transform: 'rotate(45deg)',
+                        fontSize: 20,
+                        transition: 'all 0.2s',
+                    }} 
+                    />
+                </Box>
+                </Marker>
+            ))}
 
-                {/* 選択されたマーカーのポップアップ */}
-                {selectedMarker !== null && results[selectedMarker] && (
-                    <Popup
-                        longitude={results[selectedMarker].lon}
-                        latitude={results[selectedMarker].lat}
-                        anchor="bottom"
-                        onClose={() => setSelectedMarker(null)}
-                        closeButton={false}
-                        className="custom-popup"
-                        offset={[0, -15]}
-                        maxWidth="200px"
-                        closeOnClick={false}
-                        focusAfterOpen={false}
-                    >
-                        <Card 
+            {/* 選択されたマーカーのポップアップ */}
+            {selectedMarker !== null && results[selectedMarker] && (
+                <Popup
+                longitude={results[selectedMarker].lon}
+                latitude={results[selectedMarker].lat}
+                anchor="bottom"
+                onClose={() => setSelectedMarker(null)}
+                closeButton={false}
+                className="custom-popup"
+                offset={[0, -15]}
+                maxWidth="200px"
+                closeOnClick={false}
+                focusAfterOpen={false}
+                >
+                <Card 
+                    sx={{ 
+                    minWidth: 160,
+                    maxWidth: 200,
+                    boxShadow: 6,
+                    animation: 'popupFadeIn 0.3s ease-out',
+                    position: 'relative',
+                    zIndex: 1300,
+                    bgcolor: 'background.paper',
+                    }}
+                >
+                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography 
+                            variant="subtitle2" 
+                            fontWeight="bold"
                             sx={{ 
-                                minWidth: 160,
-                                maxWidth: 200,
-                                boxShadow: 6,
-                                animation: 'popupFadeIn 0.3s ease-out',
-                                position: 'relative',
-                                zIndex: 1300,
-                                bgcolor: 'background.paper',
+                            mb: 0.5,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
                             }}
                         >
-                            <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                        <Typography 
-                                            variant="subtitle2" 
-                                            fontWeight="bold"
-                                            sx={{ 
-                                                mb: 0.5,
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap'
-                                            }}
-                                        >
-                                            {results[selectedMarker].name}
-                                        </Typography>
-                                        <Typography 
-                                            variant="caption" 
-                                            color="text.secondary"
-                                            sx={{ 
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
-                                                lineHeight: 1.2,
-                                            }}
-                                        >
-                                            {results[selectedMarker].address}
-                                        </Typography>
-                                    </Box>
-                                    <IconButton
-                                        size="small"
-                                        color="primary"
-                                        onClick={() => handleGetDirections(results[selectedMarker])}
-                                        sx={{ 
-                                            minWidth: 32,
-                                            height: 32,
-                                            borderRadius: 1.5,
-                                            bgcolor: 'primary.main',
-                                            color: 'white',
-                                            '&:hover': {
-                                                bgcolor: 'primary.dark',
-                                                transform: 'scale(1.1)',
-                                            },
-                                            transition: 'all 0.2s',
-                                        }}
-                                    >
-                                        <DirectionsIcon fontSize="small" />
-                                    </IconButton>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Popup>
-                )}
+                            {results[selectedMarker].name}
+                        </Typography>
+                        <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ 
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.2,
+                            }}
+                        >
+                            {results[selectedMarker].address}
+                        </Typography>
+                        </Box>
+                        <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleGetDirections(results[selectedMarker])}
+                        sx={{ 
+                            minWidth: 32,
+                            height: 32,
+                            borderRadius: 1.5,
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            '&:hover': {
+                            bgcolor: 'primary.dark',
+                            transform: 'scale(1.1)',
+                            },
+                            transition: 'all 0.2s',
+                        }}
+                        >
+                        <DirectionsIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
+                    </CardContent>
+                </Card>
+                </Popup>
+            )}
             </MapContainer>
 
             {/* 検索結果リスト - ドロワー形式でオーバーレイ */}
-            {hasSearchResults && (
-                <Slide direction="up" in={showResults} timeout={300}>
-                    <Paper
-                        className="search-results-drawer"
-                        sx={{
-                            position: "absolute",
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            height: "40vh",
-                            borderTopLeftRadius: 24,
-                            borderTopRightRadius: 24,
-                            borderBottomLeftRadius: 0,
-                            borderBottomRightRadius: 0,
-                            zIndex: 2000,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            bgcolor: isDarkMode 
-                                ? 'rgba(30, 30, 30, 0.98)' 
-                                : 'rgba(255, 255, 255, 0.98)',
-                            backdropFilter: 'blur(10px)',
-                            boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
+            {(hasSearchResults || (showError && errorMessage)) && (
+            <Slide direction="up" in={showResults} timeout={300}>
+                <Paper
+                className="search-results-drawer"
+                sx={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: "40vh",
+                    borderTopLeftRadius: 24,
+                    borderTopRightRadius: 24,
+                    borderBottomLeftRadius: 0,
+                    borderBottomRightRadius: 0,
+                    zIndex: 2000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    bgcolor: isDarkMode 
+                    ? 'rgba(30, 30, 30, 0.98)' 
+                    : 'rgba(255, 255, 255, 0.98)',
+                    backdropFilter: 'blur(10px)',
+                    boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
+                }}
+                elevation={0}
+                >
+                {/* ハンドル */}
+                <Box
+                    sx={{
+                    width: 40,
+                    height: 4,
+                    bgcolor: 'grey.300',
+                    borderRadius: 2,
+                    mx: 'auto',
+                    mt: 1,
+                    mb: 2,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    '&:hover': {
+                        bgcolor: 'grey.400',
+                    }
+                    }}
+                    onClick={handleDrawerToggle}
+                />
+                
+                {/* エラー表示 - 検索結果画面内に表示 */}
+                {showError && errorMessage && (
+                    <Box sx={{
+                    mx: 2,
+                    mb: 2,
+                    bgcolor: 'error.main',
+                    color: 'white',
+                    py: 1.5,
+                    px: 2,
+                    borderRadius: 2,
+                    fontWeight: 'bold',
+                    whiteSpace: 'pre-line',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    animation: 'slideDown 0.3s ease-out',
+                    boxShadow: 2,
+                    flexShrink: 0,
+                    }}>
+                    <span style={{ flex: 1 }}>{decodeURIComponent(errorMessage)}</span>
+                    <Button onClick={handleCloseError} sx={{ ml: 2, color: 'white', borderColor: 'white' }} variant="outlined" size="small">閉じる</Button>
+                    </Box>
+                )}
+                
+                {/* 雨雲回避設定 */}
+                <Box sx={{ px: 2, pb: 0.2, flexShrink: 0 }}> {/* pb: 1 → 0.2 に変更 */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.2 }}> {/* mb: 1 → 0.2 に変更 */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CloudIcon color={rainAvoidance ? "primary" : "disabled"} />
+                        <Typography variant="h6">雨雲回避ルート</Typography>
+                        {rainAvoidance && <Chip label="ON" color="primary" size="small" />}
+                    </Box>
+                    <Switch 
+                        checked={rainAvoidance}
+                        onChange={(e) => setRainAvoidance(e.target.checked)}
+                        color="primary"
+                    />
+                    </Box>
+                    
+                    {/* Yahoo!気象情報APIのクレジット表記 */}
+                    <Box sx={{ mb: 0.2 }}> {/* mb: 1 → 0.2 に変更 */}
+                    <Link 
+                        href="https://developer.yahoo.co.jp/sitemap/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ 
+                        fontSize: 'caption.fontSize',
+                        textDecoration: 'none',
+                        color: 'text.secondary',
+                        '&:hover': {
+                            textDecoration: 'underline'
+                        }
                         }}
-                        elevation={0}
                     >
-                        {/* ハンドル */}
-                        <Box
+                        Web Services by Yahoo! JAPAN
+                    </Link>
+                    </Box>
+                </Box>
+
+                <Divider sx={{ flexShrink: 0 }} />
+                
+                {/* 結果ヘッダー */}
+                <Box sx={{ px: 2, py: 0.2, flexShrink: 0 }}> {/* py: 1 → 0.2 に変更 */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" gutterBottom={false}> {/* gutterBottom を false に変更 */}
+                        検索結果 ({results.length}件)
+                    </Typography>
+                    {results.length > 1 && (
+                        <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={handleShowAllResults}
+                        sx={{ 
+                            minWidth: 'auto', 
+                            px: 1,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                            transform: 'translateY(-1px)',
+                            }
+                        }}
+                        >
+                        全体表示
+                        </Button>
+                    )}
+                    </Box>
+                </Box>
+
+                <Divider sx={{ flexShrink: 0 }} />
+                
+                {/* 結果リスト */}
+                <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                    {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                        <CircularProgress />
+                    </Box>
+                    ) : results.length === 0 && !errorMessage ? (
+                    <Box sx={{ textAlign: 'center', p: 4 }}>
+                        <Typography variant="body1" color="text.secondary">
+                        検索結果がありません
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        別のキーワードで検索してみてください
+                        </Typography>
+                    </Box>
+                    ) : results.length === 0 && errorMessage ? (
+                    <Box sx={{ textAlign: 'center', p: 4 }}>
+                        <Typography variant="body1" color="text.secondary">
+                        ルートの取得に失敗しました
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        他の目的地を試すか、設定を変更してください
+                        </Typography>
+                    </Box>
+                    ) : (
+                    <List sx={{ p: 0 }}>
+                        {results.map((result, idx) => (
+                        <ListItem
+                            key={idx}
                             sx={{
-                                width: 40,
-                                height: 4,
-                                bgcolor: 'grey.300',
-                                borderRadius: 2,
-                                mx: 'auto',
-                                mt: 1,
-                                mb: 2,
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s',
-                                '&:hover': {
-                                    bgcolor: 'grey.400',
-                                }
+                            px: 2,
+                            py: 1.5,
+                            cursor: "pointer",
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                bgcolor: 'action.hover',
+                                transform: 'translateX(4px)',
+                            },
+                            borderBottom: idx < results.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
+                            // 選択されたアイテムをハイライト
+                            ...(selectedMarker === idx && {
+                                bgcolor: 'action.selected',
+                                borderLeft: `3px solid ${theme.palette.primary.main}`,
+                            }),
                             }}
-                            onClick={handleDrawerToggle}
-                        />
-                        
-                        {/* 雨雲回避設定 */}
-                        <Box sx={{ px: 2, pb: 0.2, flexShrink: 0 }}> {/* pb: 1 → 0.2 に変更 */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.2 }}> {/* mb: 1 → 0.2 に変更 */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CloudIcon color={rainAvoidance ? "primary" : "disabled"} />
-                                    <Typography variant="h6">雨雲回避ルート</Typography>
-                                    {rainAvoidance && <Chip label="ON" color="primary" size="small" />}
-                                </Box>
-                                <Switch 
-                                    checked={rainAvoidance}
-                                    onChange={(e) => setRainAvoidance(e.target.checked)}
-                                    color="primary"
-                                />
-                            </Box>
-                            
-                            {/* Yahoo!気象情報APIのクレジット表記 */}
-                            <Box sx={{ mb: 0.2 }}> {/* mb: 1 → 0.2 に変更 */}
-                                <Link 
-                                    href="https://developer.yahoo.co.jp/sitemap/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    sx={{ 
-                                        fontSize: 'caption.fontSize',
-                                        textDecoration: 'none',
-                                        color: 'text.secondary',
-                                        '&:hover': {
-                                            textDecoration: 'underline'
-                                        }
-                                    }}
-                                >
-                                    Web Services by Yahoo! JAPAN
-                                </Link>
-                            </Box>
-                        </Box>
-
-                        <Divider sx={{ flexShrink: 0 }} />
-                        
-                        {/* 結果ヘッダー */}
-                        <Box sx={{ px: 2, py: 0.2, flexShrink: 0 }}> {/* py: 1 → 0.2 に変更 */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="h6" gutterBottom={false}> {/* gutterBottom を false に変更 */}
-                                    検索結果 ({results.length}件)
-                                </Typography>
-                                {results.length > 1 && (
-                                    <Button
-                                        variant="outlined"
-                                        size="small"
-                                        onClick={handleShowAllResults}
-                                        sx={{ 
-                                            minWidth: 'auto', 
-                                            px: 1,
-                                            transition: 'all 0.2s',
-                                            '&:hover': {
-                                                transform: 'translateY(-1px)',
-                                            }
-                                        }}
-                                    >
-                                        全体表示
-                                    </Button>
+                            onClick={() => handleMarkerClick(result.lat, result.lon, idx)}
+                            secondaryAction={
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={(e) => {
+                                e.stopPropagation();
+                                handleGetDirections(result);
+                                }}
+                                sx={{ 
+                                minWidth: isMobile ? 40 : 'auto',
+                                px: isMobile ? 1 : 2,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    transform: 'translateY(-1px)',
+                                }
+                                }}
+                            >
+                                {isMobile ? (
+                                <DirectionsIcon fontSize="small" />
+                                ) : (
+                                <>
+                                    <DirectionsIcon sx={{ mr: 0.5 }} fontSize="small" />
+                                    ルート
+                                </>
                                 )}
-                            </Box>
-                        </Box>
-
-                        <Divider sx={{ flexShrink: 0 }} />
-                        
-                        {/* 結果リスト */}
-                        <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                            {loading ? (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                                    <CircularProgress />
-                                </Box>
-                            ) : results.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', p: 4 }}>
-                                    <Typography variant="body1" color="text.secondary">
-                                        検索結果がありません
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        別のキーワードで検索してみてください
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                <List sx={{ p: 0 }}>
-                                    {results.map((result, idx) => (
-                                        <ListItem
-                                            key={idx}
-                                            sx={{
-                                                px: 2,
-                                                py: 1.5,
-                                                cursor: "pointer",
-                                                transition: 'all 0.2s',
-                                                '&:hover': {
-                                                    bgcolor: 'action.hover',
-                                                    transform: 'translateX(4px)',
-                                                },
-                                                borderBottom: idx < results.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
-                                                // 選択されたアイテムをハイライト
-                                                ...(selectedMarker === idx && {
-                                                    bgcolor: 'action.selected',
-                                                    borderLeft: `3px solid ${theme.palette.primary.main}`,
-                                                }),
-                                            }}
-                                            onClick={() => handleMarkerClick(result.lat, result.lon, idx)}
-                                            secondaryAction={
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleGetDirections(result);
-                                                    }}
-                                                    sx={{ 
-                                                        minWidth: isMobile ? 40 : 'auto',
-                                                        px: isMobile ? 1 : 2,
-                                                        transition: 'all 0.2s',
-                                                        '&:hover': {
-                                                            transform: 'translateY(-1px)',
-                                                        }
-                                                    }}
-                                                >
-                                                    {isMobile ? (
-                                                        <DirectionsIcon fontSize="small" />
-                                                    ) : (
-                                                        <>
-                                                            <DirectionsIcon sx={{ mr: 0.5 }} fontSize="small" />
-                                                            ルート
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            }
-                                        >
-                                            <ListItemAvatar>
-                                                <Avatar sx={{ 
-                                                    bgcolor: selectedMarker === idx ? 'secondary.main' : 'primary.main',
-                                                    transition: 'all 0.2s',
-                                                }}>
-                                                    <LocationOnIcon />
-                                                </Avatar>
-                                            </ListItemAvatar>
-                                            <ListItemText
-                                                primary={
-                                                    <Typography variant="subtitle1" fontWeight={600} noWrap>
-                                                        {result.name}
-                                                    </Typography>
-                                                }
-                                                secondary={
-                                                    <Typography variant="body2" color="text.secondary" noWrap>
-                                                        {result.address}
-                                                    </Typography>
-                                                }
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            )}
-                        </Box>
-                    </Paper>
-                </Slide>
+                            </Button>
+                            }
+                        >
+                            <ListItemAvatar>
+                            <Avatar sx={{ 
+                                bgcolor: selectedMarker === idx ? 'secondary.main' : 'primary.main',
+                                transition: 'all 0.2s',
+                            }}>
+                                <LocationOnIcon />
+                            </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                            primary={
+                                <Typography variant="subtitle1" fontWeight={600} noWrap>
+                                {result.name}
+                                </Typography>
+                            }
+                            secondary={
+                                <Typography variant="body2" color="text.secondary" noWrap>
+                                {result.address}
+                                </Typography>
+                            }
+                            />
+                        </ListItem>
+                        ))}
+                    </List>
+                    )}
+                </Box>
+                </Paper>
+            </Slide>
             )}
 
             {/* ドロワーが下がっている時の最小化されたドロワー */}
-            {!showResults && hasSearchResults && (
-                <Paper
+            {!showResults && (hasSearchResults || (showError && errorMessage)) && (
+            <Paper
+                sx={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: showError && errorMessage ? 'auto' : 60,
+                minHeight: 60,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                borderBottomLeftRadius: 0,
+                borderBottomRightRadius: 0,
+                zIndex: 2000,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: showError && errorMessage ? 'flex-start' : 'center',
+                bgcolor: isDarkMode 
+                    ? 'rgba(30, 30, 30, 0.95)' 
+                    : 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                    bgcolor: isDarkMode 
+                    ? 'rgba(50, 50, 50, 0.95)' 
+                    : 'rgba(255, 255, 255, 1)',
+                    transform: 'translateY(-2px)',
+                }
+                }}
+                elevation={0}
+                onClick={handleDrawerToggle}
+            >
+                {/* エラー表示 - 最小化されたドロワーでも表示 */}
+                {showError && errorMessage && (
+                <Box sx={{
+                    width: '100%',
+                    bgcolor: 'error.main',
+                    color: 'white',
+                    py: 1.5,
+                    px: 2,
+                    fontWeight: 'bold',
+                    whiteSpace: 'pre-line',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderTopLeftRadius: 24,
+                    borderTopRightRadius: 24,
+                    mb: 1,
+                    flexShrink: 0,
+                }}>
+                    <span style={{ flex: 1 }}>{decodeURIComponent(errorMessage)}</span>
+                    <Button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleCloseError();
+                    }} 
+                    sx={{ ml: 2, color: 'white', borderColor: 'white' }} 
+                    variant="outlined" 
+                    size="small"
+                    >
+                    閉じる
+                    </Button>
+                </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
                     sx={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: 60,
-                        borderTopLeftRadius: 24,
-                        borderTopRightRadius: 24,
-                        borderBottomLeftRadius: 0,
-                        borderBottomRightRadius: 0,
-                        zIndex: 2000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: isDarkMode 
-                            ? 'rgba(30, 30, 30, 0.95)' 
-                            : 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(10px)',
-                        boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        '&:hover': {
-                            bgcolor: isDarkMode 
-                                ? 'rgba(50, 50, 50, 0.95)' 
-                                : 'rgba(255, 255, 255, 1)',
-                            transform: 'translateY(-2px)',
-                        }
+                    width: 40,
+                    height: 4,
+                    bgcolor: 'grey.300',
+                    borderRadius: 2,
                     }}
-                    elevation={0}
-                    onClick={handleDrawerToggle}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box
-                            sx={{
-                                width: 40,
-                                height: 4,
-                                bgcolor: 'grey.300',
-                                borderRadius: 2,
-                            }}
-                        />
-                        <Typography variant="body2" color="text.secondary">
-                            {results.length}件の検索結果
-                        </Typography>
-                        {rainAvoidance && (
-                            <Chip 
-                                label="雨雲回避ON" 
-                                size="small" 
-                                color="primary" 
-                                sx={{ ml: 1 }}
-                            />
-                        )}
-                    </Box>
-                </Paper>
+                />
+                <Typography variant="body2" color="text.secondary">
+                    {results.length > 0 ? `${results.length}件の検索結果` : 'エラーが発生しました'}
+                </Typography>
+                {rainAvoidance && (
+                    <Chip 
+                    label="雨雲回避ON" 
+                    size="small" 
+                    color="primary" 
+                    sx={{ ml: 1 }}
+                    />
+                )}
+                </Box>
+            </Paper>
             )}
         </AppLayout>
     );

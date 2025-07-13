@@ -31,6 +31,10 @@ export class RouteService {
             });
             
             if (!response.ok) {
+                // 400エラーの場合は特別なエラーメッセージを投げる
+                if (response.status === 400) {
+                    throw new Error(`HTTP error! status: 400 - Route calculation failed`);
+                }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
@@ -40,7 +44,13 @@ export class RouteService {
             
         } catch (error) {
             console.error('Failed to fetch route from API:', error);
-            // フォールバック: サンプルデータを使用
+            
+            // 400エラーの場合はそのまま再投げする
+            if (error instanceof Error && error.message.includes('status: 400')) {
+                throw error;
+            }
+            
+            // その他のエラーの場合はフォールバック: サンプルデータを使用
             console.log('Falling back to sample data');
             return this.getSampleRouteData(startLng, startLat, endLng, endLat);
         }
