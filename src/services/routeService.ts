@@ -40,6 +40,17 @@ export class RouteService {
             
             const routeData: RouteResponse = await response.json();
             console.log('Received route data:', routeData);
+            
+            // レスポンス形式を正規化（route_sample.jsonの形式に対応）
+            if (routeData.response && routeData.response.paths) {
+                return {
+                    paths: routeData.response.paths,
+                    rain_tile_list: routeData.rain_tile_list,
+                    hints: routeData.hints || { "visited_nodes.sum": 0, "visited_nodes.average": 0 },
+                    info: routeData.info || { copyrights: [], took: 0, road_data_timestamp: '' }
+                };
+            }
+            
             return routeData;
             
         } catch (error) {
@@ -72,6 +83,17 @@ export class RouteService {
             
             // サンプルデータをそのまま返す（座標調整なし）
             console.log('Using route_sample.json data:', sampleData);
+            
+            // レスポンス形式を正規化（route_sample.jsonの形式に対応）
+            if (sampleData.response && sampleData.response.paths) {
+                return {
+                    paths: sampleData.response.paths,
+                    rain_tile_list: sampleData.rain_tile_list,
+                    hints: sampleData.hints || { "visited_nodes.sum": 0, "visited_nodes.average": 0 },
+                    info: sampleData.info || { copyrights: [], took: 0, road_data_timestamp: '' }
+                };
+            }
+            
             return sampleData;
         } catch (error) {
             console.error('Failed to load sample route:', error);
@@ -91,15 +113,6 @@ export class RouteService {
         const timeInMilliseconds = Math.round((distance / 8.33) * 1000);
         
         return {
-            hints: {
-                "visited_nodes.sum": 250,
-                "visited_nodes.average": 250.0
-            },
-            info: {
-                copyrights: ["GraphHopper", "OpenStreetMap contributors"],
-                took: 1,
-                road_data_timestamp: new Date().toISOString()
-            },
             paths: [{
                 distance: distance,
                 weight: 1159.300583,
@@ -157,7 +170,17 @@ export class RouteService {
                         [endLng, endLat]
                     ]
                 }
-            }]
+            }],
+            rain_tile_list: [],
+            hints: {
+                "visited_nodes.sum": 250,
+                "visited_nodes.average": 250.0
+            },
+            info: {
+                copyrights: ["GraphHopper", "OpenStreetMap contributors"],
+                took: 1,
+                road_data_timestamp: new Date().toISOString()
+            }
         };
     }
 

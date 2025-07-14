@@ -24,6 +24,7 @@ import SportsMotorsportsIcon from "@mui/icons-material/SportsMotorsports";
 import CloudIcon from "@mui/icons-material/Cloud";
 import { RouteService } from "./services/routeService";
 import InstructionIcon from "./components/InstructionIcon";
+import RainTileLayer from "./components/map/RainTileLayer";
 import type { RouteResponse } from "./types/route";
 import { useThemeMode } from "./theme/ThemeProvider";
 
@@ -155,7 +156,7 @@ export default function RouteScreen() {
         fetchRoute();
     }, [currentPosition, endLng, endLat, rainAvoidance]); // rainAvoidanceを依存配列に追加
 
-    const routePath = route?.paths[0];
+    const routePath = route?.paths?.[0];
 
     const handleStartNavigation = () => {
         navigate(`/navigate?${searchParams.toString()}`);
@@ -247,6 +248,11 @@ export default function RouteScreen() {
                         </Marker>
                     )}
 
+                    {/* 雨タイル表示 */}
+                    {route?.rain_tile_list && route.rain_tile_list.length > 0 && (
+                        <RainTileLayer rainTiles={route.rain_tile_list} />
+                    )}
+
                     {/* ルート線 */}
                     {routePath && (
                         <Source id="route" type="geojson" data={routePath.points}>
@@ -332,6 +338,33 @@ export default function RouteScreen() {
                         Web Services by Yahoo! JAPAN
                     </Link>
                 </Box>
+
+                {/* 雨タイル凡例 */}
+                {route?.rain_tile_list && route.rain_tile_list.length > 0 && (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        mb: 2,
+                        p: 1.5,
+                        bgcolor: 'grey.50',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'grey.300'
+                    }}>
+                        <Box sx={{ 
+                            width: 16, 
+                            height: 16, 
+                            bgcolor: '#2196f3', 
+                            opacity: 0.4,
+                            borderRadius: 0.5,
+                            border: '1px solid #1976d2'
+                        }} />
+                        <Typography variant="caption" color="text.secondary">
+                            雨が降る可能性のあるエリア ({route.rain_tile_list.length}箇所)
+                        </Typography>
+                    </Box>
+                )}
 
                 {/* ルート情報 */}
                 {routePath && (

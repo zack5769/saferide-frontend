@@ -21,6 +21,7 @@ import FlagIcon from "@mui/icons-material/Flag";
 import HomeIcon from "@mui/icons-material/Home";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { RouteService } from "./services/routeService";
+import RainTileLayer from "./components/map/RainTileLayer";
 import type { RouteResponse, RouteInstruction } from "./types/route";
 import { useThemeMode } from "./theme/ThemeProvider";
 
@@ -73,7 +74,7 @@ export default function NavigationScreen() {
         coordinateIndex: number, 
         instructionIndex: number
     ): number => {
-        if (!route?.paths[0]) return 0;
+        if (!route?.paths?.[0]) return 0;
         
         const coordinates = route.paths[0].points.coordinates;
         const instructions = route.paths[0].instructions;
@@ -118,7 +119,7 @@ export default function NavigationScreen() {
                 setRoute(routeData);
                 
                 // 開始位置を設定
-                if (routeData.paths[0]?.points.coordinates[0]) {
+                if (routeData.paths?.[0]?.points.coordinates[0]) {
                     const startCoord = routeData.paths[0].points.coordinates[0];
                     setSimulatedPosition([startCoord[0], startCoord[1]]);
                     setViewport(prev => ({
@@ -137,8 +138,8 @@ export default function NavigationScreen() {
                 }
                 
                 // 残り時間と距離を初期化
-                setRemainingTime(routeData.paths[0]?.time || 0);
-                setRemainingDistance(routeData.paths[0]?.distance || 0);
+                setRemainingTime(routeData.paths?.[0]?.time || 0);
+                setRemainingDistance(routeData.paths?.[0]?.distance || 0);
             } catch (error) {
                 console.error('Failed to fetch route:', error);
             }
@@ -149,7 +150,7 @@ export default function NavigationScreen() {
 
     // ナビゲーションシミュレーション
     useEffect(() => {
-        if (!isNavigating || !route?.paths[0]?.points.coordinates) return;
+        if (!isNavigating || !route?.paths?.[0]?.points.coordinates) return;
 
         const coordinates = route.paths[0].points.coordinates;
         const instructions = route.paths[0].instructions;
@@ -178,7 +179,7 @@ export default function NavigationScreen() {
 
                 // 残り時間と距離を更新（概算）
                 const remainingPercent = (coordinates.length - coordinateIndex) / coordinates.length;
-                setRemainingTime(Math.round(route.paths[0].time * remainingPercent));
+                setRemainingTime(Math.round((route.paths?.[0]?.time || 0) * remainingPercent));
                 setRemainingDistance(Math.round(totalDistance * remainingPercent));
 
                 // 次の指示までの距離を更新
@@ -259,7 +260,7 @@ export default function NavigationScreen() {
         }
     };
 
-    const routePath = route?.paths[0];
+    const routePath = route?.paths?.[0];
     const currentInstruction = routePath?.instructions[currentInstructionIndex];
     const nextInstruction = routePath?.instructions[currentInstructionIndex + 1];
 
@@ -281,6 +282,11 @@ export default function NavigationScreen() {
                     : "mapbox://styles/mapbox/navigation-day-v1"}
                 mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
             >
+                {/* 雨タイル表示 */}
+                {route?.rain_tile_list && route.rain_tile_list.length > 0 && (
+                    <RainTileLayer rainTiles={route.rain_tile_list} />
+                )}
+
                 {/* ルート線 */}
                 {routePath && (
                     <Source id="route" type="geojson" data={routePath.points}>

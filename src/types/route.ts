@@ -32,15 +32,25 @@ export interface RoutePath {
     };
 }
 
+export interface RainTile {
+    x: number;
+    y: number;
+    zoom: number;
+}
+
 export interface RouteResponse {
-    hints: {
+    response?: {
+        paths: RoutePath[];
+    };
+    hints?: {
         "visited_nodes.sum": number;
         "visited_nodes.average": number;
     };
-    info: {
+    info?: {
         copyrights: string[];
         took: number;
         road_data_timestamp: string;
     };
-    paths: RoutePath[];
+    paths?: RoutePath[];
+    rain_tile_list?: RainTile[];
 }
