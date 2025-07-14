@@ -1,3 +1,5 @@
+// 検索結果画面
+// 場所検索の結果を表示し、目的地の選択とルート計算を行う
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Marker, Popup } from "react-map-gl";
@@ -32,6 +34,9 @@ import MapContainer from "./components/map/MapContainer";
 import { useMapViewport } from "./hooks/useMapViewport";
 import { useThemeMode } from "./theme/ThemeProvider";
 
+/**
+ * 検索結果のデータ構造
+ */
 interface SearchResult {
     name: string;
     address: string;
@@ -41,6 +46,14 @@ interface SearchResult {
     category?: string;
 }
 
+/**
+ * 検索結果画面コンポーネント
+ * 主要機能：
+ * - 場所検索結果の表示
+ * - 地図上でのマーカー表示
+ * - 目的地選択とルート計算
+ * - 雨雲回避設定の管理
+ */
 export default function SearchResultScreen() {
     const [searchParams] = useSearchParams();
     // エラーメッセージ取得
@@ -50,23 +63,28 @@ export default function SearchResultScreen() {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const { isDarkMode } = useThemeMode();
 
+    // 検索結果の状態管理
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
     const [showResults, setShowResults] = useState(false);
     const [hasInitiallyAdjusted, setHasInitiallyAdjusted] = useState(false);
     const [hasSearchResults, setHasSearchResults] = useState(false);
-    const [rainAvoidance, setRainAvoidance] = useState(true); // 雨雲回避設定を追加
+    const [rainAvoidance, setRainAvoidance] = useState(true); // 雨雲回避設定
 
+    // 地図のビューポート管理
     const { viewport, setViewport, mapRef, flyTo } = useMapViewport({
         initialLongitude: 138,
         initialLatitude: 36,
         initialZoom: 6
     });
 
-    // --- エラー表示用 ---
+    // エラー表示用の状態管理
     const [showError, setShowError] = useState(!!errorMessage);
-    // エラーアラートを閉じる
+    
+    /**
+     * エラーアラートを閉じる処理
+     */
     const handleCloseError = () => {
         setShowError(false);
         // エラーを消してURLをクリーンアップ（検索クエリは保持）
@@ -75,7 +93,11 @@ export default function SearchResultScreen() {
         navigate({ pathname: '/searchResult', search: params.toString() }, { replace: true });
     };
 
-    // ピンを画面中央に表示する関数
+    /**
+     * 地図の中心を指定した位置に移動
+     * @param lat 緯度
+     * @param lon 経度
+     */
     const centerMapOnPin = (lat: number, lon: number) => {
         if (!mapRef.current) return;
 
@@ -96,7 +118,10 @@ export default function SearchResultScreen() {
         }
     };
 
-    // 初回の検索結果表示時のみ全体を表示する関数
+    /**
+     * 全ての検索結果が表示されるように地図を調整
+     * @param results 検索結果配列
+     */
     const adjustMapToAllResults = (results: SearchResult[]) => {
         if (results.length === 0) return;
         

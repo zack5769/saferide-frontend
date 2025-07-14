@@ -1,3 +1,5 @@
+// 検索バーコンポーネント
+// 場所検索のためのユーザーインターフェース
 import { useState, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -14,16 +16,27 @@ import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useThemeMode } from "../theme/ThemeProvider";
 
+/**
+ * 検索バーコンポーネントのプロパティ
+ */
 interface SearchBarProps {
-    initialQuery?: string;
-    onClose?: () => void;
-    onBack?: () => void;
-    showBackButton?: boolean;
-    showCloseButton?: boolean;
-    placeholder?: string;
-    autoFocus?: boolean;
+    initialQuery?: string;      // 初期検索クエリ
+    onClose?: () => void;       // 閉じるボタンのコールバック
+    onBack?: () => void;        // 戻るボタンのコールバック
+    showBackButton?: boolean;   // 戻るボタンの表示
+    showCloseButton?: boolean;  // 閉じるボタンの表示
+    placeholder?: string;       // プレースホルダーテキスト
+    autoFocus?: boolean;        // オートフォーカス
 }
 
+/**
+ * 検索バーコンポーネント
+ * 機能：
+ * - 場所検索のテキスト入力
+ * - 検索結果画面への遷移
+ * - レスポンシブデザイン
+ * - ダークモード対応
+ */
 const SearchBar = forwardRef<HTMLFormElement, SearchBarProps>(({
     initialQuery = "",
     onClose,
@@ -39,6 +52,9 @@ const SearchBar = forwardRef<HTMLFormElement, SearchBarProps>(({
     const { isDarkMode } = useThemeMode();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+    /**
+     * 検索実行処理
+     */
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         if (query.trim()) {
@@ -46,6 +62,9 @@ const SearchBar = forwardRef<HTMLFormElement, SearchBarProps>(({
         }
     };
 
+    /**
+     * 戻るボタンの処理
+     */
     const handleBack = () => {
         if (onBack) {
             onBack();

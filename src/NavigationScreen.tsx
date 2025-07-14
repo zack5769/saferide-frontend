@@ -1,3 +1,5 @@
+// ナビゲーション画面
+// 実際のルート案内とリアルタイム位置追跡を行う
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Map, { Marker, Source, Layer } from "react-map-gl";
@@ -25,6 +27,14 @@ import RainTileLayer from "./components/map/RainTileLayer";
 import type { RouteResponse, RouteInstruction } from "./types/route";
 import { useThemeMode } from "./theme/ThemeProvider";
 
+/**
+ * ナビゲーション画面コンポーネント
+ * 主要機能：
+ * - リアルタイムナビゲーション表示
+ * - 音声案内シミュレーション
+ * - 進行状況の可視化
+ * - 雨雲情報の表示
+ */
 export default function NavigationScreen() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -32,6 +42,7 @@ export default function NavigationScreen() {
     const isMobile = useMediaQuery("(max-width:600px)");
     const { isDarkMode } = useThemeMode();
     
+    // ルートと指示の状態管理
     const [route, setRoute] = useState<RouteResponse | null>(null);
     const [currentInstructionIndex, setCurrentInstructionIndex] = useState(0);
     const [simulatedPosition, setSimulatedPosition] = useState<[number, number] | null>(null);
@@ -43,20 +54,28 @@ export default function NavigationScreen() {
     const [distanceToNextInstruction, setDistanceToNextInstruction] = useState(0);
     const [isComplete, setIsComplete] = useState(false);
     
+    // 地図のビューポート状態
     const [viewport, setViewport] = useState({
         longitude: 137.7,
         latitude: 34.7,
         zoom: 18
     });
 
-    // URLパラメータから取得
+    // URLパラメータから座標を取得
     const startLng = parseFloat(searchParams.get('startLng') || '137.7');
     const startLat = parseFloat(searchParams.get('startLat') || '34.7');
     const endLng = parseFloat(searchParams.get('endLng') || '137.72');
     const endLat = parseFloat(searchParams.get('endLat') || '34.72');
     const destinationName = searchParams.get('name') || '目的地';
 
-    // 2点間の距離を計算する関数（メートル）
+    /**
+     * 2点間の距離を計算する関数（メートル）
+     * @param lat1 緯度1
+     * @param lng1 経度1
+     * @param lat2 緯度2
+     * @param lng2 経度2
+     * @returns 距離（メートル）
+     */
     const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
         const R = 6371000; // 地球の半径（メートル）
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -68,7 +87,13 @@ export default function NavigationScreen() {
         return R * c;
     };
 
-    // 現在位置から次の指示までの距離を計算
+    /**
+     * 現在位置から次の指示までの距離を計算
+     * @param currentPosition 現在位置
+     * @param coordinateIndex 現在の座標インデックス
+     * @param instructionIndex 現在の指示インデックス
+     * @returns 距離（メートル）
+     */
     const calculateDistanceToNextInstruction = (
         currentPosition: [number, number], 
         coordinateIndex: number, 

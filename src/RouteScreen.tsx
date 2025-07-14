@@ -1,3 +1,5 @@
+// ルート詳細画面
+// 計算されたルートを表示し、ナビゲーションを開始する
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Map, { Marker, Source, Layer } from "react-map-gl";
@@ -28,6 +30,14 @@ import RainTileLayer from "./components/map/RainTileLayer";
 import type { RouteResponse } from "./types/route";
 import { useThemeMode } from "./theme/ThemeProvider";
 
+/**
+ * ルート詳細画面コンポーネント
+ * 主要機能：
+ * - 計算されたルートの地図表示
+ * - ルート詳細情報の表示（距離、時間、指示）
+ * - 雨雲回避設定の切り替え
+ * - ナビゲーション開始
+ */
 export default function RouteScreen() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -35,17 +45,19 @@ export default function RouteScreen() {
     const mapRef = useRef<any>(null);
     const { isDarkMode } = useThemeMode();
     
+    // ルート関連の状態管理
     const [route, setRoute] = useState<RouteResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null);
     
+    // 地図のビューポート状態
     const [viewport, setViewport] = useState({
         longitude: 137.7,
         latitude: 34.7,
         zoom: 14
     });
 
-    // URLパラメータから取得
+    // URLパラメータから座標と設定を取得
     const startLng = parseFloat(searchParams.get('startLng') || '137.7');
     const startLat = parseFloat(searchParams.get('startLat') || '34.7');
     const endLng = parseFloat(searchParams.get('endLng') || '137.72');
@@ -56,7 +68,9 @@ export default function RouteScreen() {
     // 雨雲回避の初期値をURLパラメータから設定
     const [rainAvoidance, setRainAvoidance] = useState(initialRainAvoidance);
 
-    // 現在地を取得
+    /**
+     * 現在地を取得するEffect
+     */
     useEffect(() => {
         navigator.geolocation.getCurrentPosition((pos) => {
             setCurrentPosition([pos.coords.longitude, pos.coords.latitude]);
@@ -71,7 +85,9 @@ export default function RouteScreen() {
         });
     }, [startLng, startLat]);
 
-    // ルート取得
+    /**
+     * ルート取得処理
+     */
     useEffect(() => {
         if (!currentPosition) return;
 

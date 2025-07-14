@@ -1,12 +1,23 @@
+// 雨雲タイルレイヤーコンポーネント
+// 雨雲情報を地図上に可視化する
 import React from 'react';
 import { Source, Layer } from 'react-map-gl';
 import type { RainTile } from '../../types/route';
 
+/**
+ * 雨雲タイルレイヤーのプロパティ
+ */
 interface RainTileLayerProps {
     rainTiles: RainTile[];
 }
 
-// タイル座標を地理座標に変換する関数
+/**
+ * タイル座標を地理座標に変換する関数
+ * @param x タイルのX座標
+ * @param y タイルのY座標
+ * @param z ズームレベル
+ * @returns [経度, 緯度]
+ */
 function tileToLonLat(x: number, y: number, z: number): [number, number] {
     const n = Math.pow(2, z);
     const lonDeg = (x / n) * 360.0 - 180.0;
@@ -15,7 +26,13 @@ function tileToLonLat(x: number, y: number, z: number): [number, number] {
     return [lonDeg, latDeg];
 }
 
-// タイルの境界を計算する関数
+/**
+ * タイルの境界を計算する関数
+ * @param x タイルのX座標
+ * @param y タイルのY座標
+ * @param z ズームレベル
+ * @returns ポリゴンの座標配列
+ */
 function getTileBounds(x: number, y: number, z: number): number[][] {
     const [westLng, northLat] = tileToLonLat(x, y, z);
     const [eastLng, southLat] = tileToLonLat(x + 1, y + 1, z);
@@ -29,6 +46,14 @@ function getTileBounds(x: number, y: number, z: number): number[][] {
     ];
 }
 
+/**
+ * 雨雲タイルレイヤーコンポーネント
+ * 機能：
+ * - 雨雲タイルの地図表示
+ * - タイル座標から地理座標への変換
+ * - 半透明の雨雲オーバーレイ
+ * - Yahoo!気象データの可視化
+ */
 const RainTileLayer: React.FC<RainTileLayerProps> = ({ rainTiles }) => {
     if (!rainTiles || rainTiles.length === 0) {
         return null;

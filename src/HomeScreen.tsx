@@ -1,3 +1,5 @@
+// SafeRideアプリケーションのホーム画面
+// 地図表示、現在地取得、検索機能を提供
 import { useState, useEffect } from "react";
 import { Marker } from "react-map-gl";
 import {
@@ -17,6 +19,14 @@ import { useGeolocation } from "./hooks/useGeolocation";
 import { useMapViewport } from "./hooks/useMapViewport";
 import { useThemeMode } from "./theme/ThemeProvider";
 
+/**
+ * ホーム画面コンポーネント
+ * 主要機能：
+ * - 地図表示とインタラクション
+ * - 現在地取得と表示
+ * - 検索バーによる場所検索
+ * - 現在地ボタンによる地図移動
+ */
 export default function HomeScreen() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -28,7 +38,9 @@ export default function HomeScreen() {
         initialZoom: 16
     });
 
+    // 現在地ボタンの表示制御
     const [showLocationButton, setShowLocationButton] = useState(false);
+    // 初回の位置設定フラグ
     const [hasInitializedPosition, setHasInitializedPosition] = useState(false);
 
     // 現在地が取得されたら地図の中心を移動
@@ -48,7 +60,10 @@ export default function HomeScreen() {
         }
     }, [position, hasInitializedPosition, setViewport, showLocationButton]);
 
-    // 現在地ボタンが押されたときの処理
+    /**
+     * 現在地ボタンクリック時の処理
+     * 現在地に地図を移動させる
+     */
     const handleFlyToCurrent = () => {
         if (position) {
             flyTo(position[0], position[1], 16);
@@ -86,7 +101,7 @@ export default function HomeScreen() {
                 )}
             </MapContainer>
 
-            {/* 現在地ボタン */}
+            {/* 現在地ボタン - 現在地に地図を移動 */}
             <Zoom in={showLocationButton} timeout={300}>
                 <Fab
                     color="primary"
@@ -104,7 +119,7 @@ export default function HomeScreen() {
                 </Fab>
             </Zoom>
 
-            {/* エラー表示 */}
+            {/* エラー表示 - GPS取得エラー等を表示 */}
             <Snackbar 
                 open={!!error} 
                 autoHideDuration={6000}

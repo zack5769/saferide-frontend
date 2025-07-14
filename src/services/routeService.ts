@@ -1,7 +1,15 @@
+// ルート計算サービス
+// バックエンドAPIと連携してルート計算を行う
 import type { RouteResponse } from '../types/route';
 
 /**
  * ルート計算サービス
+ * 機能：
+ * - 通常ルート計算
+ * - 雨雲回避ルート計算
+ * - フォールバック機能（route_sample.json）
+ * - 気象情報との連携
+ * 
  * 気象情報: Web Services by Yahoo! JAPAN
  * https://developer.yahoo.co.jp/sitemap/
  */
@@ -9,6 +17,15 @@ export class RouteService {
     private static readonly BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
     private static readonly ROUTING_API_URL = 'http://127.0.0.1:5000';
 
+    /**
+     * ルート計算を実行
+     * @param startLng 開始地点の経度
+     * @param startLat 開始地点の緯度
+     * @param endLng 終了地点の経度
+     * @param endLat 終了地点の緯度
+     * @param rainAvoidance 雨雲回避設定
+     * @returns ルート情報
+     */
     static async getRoute(
         startLng: number,
         startLat: number,
